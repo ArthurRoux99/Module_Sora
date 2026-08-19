@@ -1,0 +1,28 @@
+{
+    "sourceName": "Anime-Sama VOSTFR",
+    "iconUrl": "https://raw.githubusercontent.com/Anime-Sama/IMG/img/autres/logo.png",
+    "author": {
+        "name": "ArthurRoux99",
+        "icon": "https://avatars.githubusercontent.com/u/0?v=4",
+        "url": "https://github.com/ArthurRoux99"
+    },
+    "version": "1.2.0",
+    "language": "French (VOSTFR)",
+    "languageType": [
+        "Subbed",
+        "Dubbed"
+    ],
+    "streamType": "HLS/MP4",
+    "quality": "1080p",
+    "baseUrl": "https://anime-sama.to/",
+    "searchBaseUrl": "https://anime-sama.to/catalogue?search=%s",
+    "scriptUrl": "https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Anime-Sama-VOSTFR/anime-sama-vostfr.js",
+    "type": "anime",
+    "asyncJS": true,
+    "softsub": false,
+    "downloadSupport": true,
+    "combo": false,
+    "supportsSora": true,
+    "supportsShirox": true,
+    "supportsLuna": true
+}
