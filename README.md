@@ -11,7 +11,10 @@ Ajouter un module par URL de manifest :
 ```
 https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Anime-Sama-VOSTFR/anime-sama-vostfr.json
 ```
-
+**ReAnime** 
+```
+https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/ReAnime/reanime.json
+```
 **Animex** (anglais, SUB prioritaire, HLS 1080p)
 ```
 https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Animex/animex.json
