@@ -243,9 +243,28 @@ export async function loadModule(scriptPath, opts = {}) {
   const required = ['searchResults', 'extractDetails', 'extractEpisodes', 'extractStreamUrl'];
   const fns = {};
   const missing = [];
+  // Résolution style 1 : fonctions libres exposées dans le scope.
   for (const name of required) {
     if (typeof sandbox[name] === 'function') fns[name] = sandbox[name];
     else missing.push(name);
+  }
+  // Résolution style 2 : le module est une CLASSE (ex: class X { static async searchResults... }).
+  // On expose alors les méthodes statiques comme fonctions appelables.
+  if (missing.length) {
+    for (const key of Object.keys(sandbox)) {
+      const v = sandbox[key];
+      const isClassLike = v && typeof v === 'function' && required.every(
+        (n) => typeof v[n] === 'function' || (v.prototype && typeof v.prototype[n] === 'function'),
+      );
+      if (isClassLike) {
+        for (const name of required) {
+          if (typeof v[name] === 'function') fns[name] = v[name];
+          else if (v.prototype && typeof v.prototype[name] === 'function') fns[name] = v.prototype[name].bind(v.prototype);
+          missing.splice(missing.indexOf(name), 1);
+        }
+        break;
+      }
+    }
   }
   return { fns, stats, missing, sandbox };
 }

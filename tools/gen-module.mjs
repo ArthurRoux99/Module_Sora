@@ -75,6 +75,52 @@ if (contentUrl) {
   content = p.text;
   console.log(`page contenu: ${contentUrl.slice(0, 70)} (${p.text.length}b)`);
 }
+// ---- 1b. Détection API : sonde search/details/episodes et donne au LLM des
+// exemples RÉELS de chaque endpoint (le LLM ignore les données fournies et
+// hallucine la structure — constaté : il a lu data.episodes alors que l'API
+// renvoie data.data avec episode_number, pas number).
+async function detectApi(origin, sampleAnimeId = null) {
+  const examples = {};
+  const tryGet = async (u) => {
+    const r = await probe(u, { headers: { Accept: 'application/json' } });
+    if (r.status === 200 && /json/i.test(r.ct) && r.text.length > 40) return r.text.slice(0, 1800);
+    return null;
+  };
+  // search
+  for (const u of [origin + '/api/v1/search?q=frieren', origin + '/api/search?query=frieren', origin + '/api/search?q=frieren']) {
+    const b = await tryGet(u);
+    if (b) { examples.search = { url: u, body: b }; break; }
+  }
+  // si on a un anime_id d'exemple, on sonde details + episodes
+  if (sampleAnimeId) {
+    for (const u of [origin + `/api/v1/anime/${sampleAnimeId}`, origin + `/api/anime/${sampleAnimeId}`]) {
+      const b = await tryGet(u); if (b) { examples.details = { url: u, body: b }; break; }
+    }
+    for (const u of [origin + `/api/v1/anime/${sampleAnimeId}/episodes`, origin + `/api/anime/${sampleAnimeId}/episodes`]) {
+      const b = await tryGet(u); if (b) { examples.episodes = { url: u, body: b }; break; }
+    }
+  }
+  if (!examples.search) {
+    const g = await probe(origin + '/graphql', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: '{"query":"{__typename}"}' });
+    if (g.status === 200 && /application\/json/.test(g.ct)) examples.graphql = { url: origin + '/graphql', body: g.text.slice(0, 1200) };
+  }
+  return Object.keys(examples).length ? examples : null;
+}
+// Récupère un anime_id d'exemple via la recherche pour sonder details/episodes.
+let sampleId = null;
+{
+  const r = await probe(origin + '/api/v1/search?q=frieren', { headers: { Accept: 'application/json' } });
+  if (r.status === 200 && /json/i.test(r.ct)) {
+    try {
+      const d = JSON.parse(r.text);
+      const arr = d.results || d.data?.results || d.data || [];
+      const first = Array.isArray(arr) ? arr[0] : null;
+      sampleId = first?.anime_id || first?.id || first?.idMal || null;
+    } catch {}
+  }
+}
+const api = await detectApi(origin, sampleId);
+
 const both = home.text + '\n' + content;
 
 // Sondage ciblé : une vraie recherche + une vraie page d'épisodes, pour donner
@@ -130,7 +176,7 @@ const refCode = existsSync(`corpus/${model.slug}.js`) ? await readFile(`corpus/$
 
 // ---- 3. Prompt ----
 const CONTRACT = readFileSyncText('contract-snippet.txt');
-const prompt = buildPrompt({ target, sourceName, engine, home, content, searchHtml, episodeHtml, refCode, model, CONTRACT });
+const prompt = buildPrompt({ target, sourceName, engine, home, content, searchHtml, episodeHtml, api, refCode, model, CONTRACT });
 
 console.log('\n\x1b[36mappel qwen3-coder:30b (Ollama)...\x1b[0m');
 const llm = await ollamaGenerate(prompt, { model: MODEL, host: OLLAMA });
@@ -148,14 +194,33 @@ if (noWrite) console.log(`\x1b[33m(--no-write) module NON écrit\x1b[0m : ${jsPa
 else await writeFile(jsPath, code, 'utf-8');
 if (!noWrite) console.log(`module écrit: ${jsPath}`);
 
-// Smoke test du contrat (4 fonctions + JSON.stringify)
+// Smoke test du contrat (4 fonctions + JSON.stringify).
+// Gère les deux styles de module : fonctions libres OU classe avec méthodes
+// statiques (ex: `class ReAnime { static async searchResults... }`).
 const stats = new RuntimeStats();
 const sb = createSandbox({ stats, allowTelemetry: false, paceMs: 400 });
 let loadErr = null;
 try { new vm.Script(code).runInContext(vm.createContext(sb)); }
 catch (e) { loadErr = e.message; }
 const need = ['searchResults', 'extractDetails', 'extractEpisodes', 'extractStreamUrl'];
-const missing = need.filter((f) => typeof sb[f] !== 'function');
+let missing = need.filter((f) => typeof sb[f] !== 'function');
+// Si fonctions libres absentes, chercher une classe exposée et ses méthodes
+// (statiques OU prototype). Une classe avec méthodes statiques les a sur elle-
+// même (v[f]), pas sur v.prototype.
+if (missing.length && !loadErr) {
+  for (const key of Object.keys(sb)) {
+    const v = sb[key];
+    const hasFn = (f) => typeof v[f] === 'function' || (v.prototype && typeof v.prototype[f] === 'function');
+    if (v && typeof v === 'function' && need.every(hasFn)) {
+      for (const f of need) {
+        const fn = typeof v[f] === 'function' ? v[f] : (v.prototype[f] ? v.prototype[f].bind(v.prototype) : null);
+        if (fn && typeof sb[f] !== 'function') sb[f] = fn;
+      }
+      missing = need.filter((f) => typeof sb[f] !== 'function');
+      break;
+    }
+  }
+}
 console.log(`\n\x1b[1msmoke test contrat\x1b[0m`);
 console.log(`  chargement       : ${loadErr ? '\x1b[31mERREUR\x1b[0m ' + loadErr : '\x1b[32mOK\x1b[0m'}`);
 console.log(`  4 fonctions      : ${missing.length ? '\x1b[31mmanquantes: ' + missing.join(',') : '\x1b[32mprésentes\x1b[0m'}`);
@@ -183,14 +248,19 @@ async function ollamaGenerate(prompt, { model, host, temperature = 0.2 }) {
 
 function extractJs(text) {
   const fenced = text.match(/```(?:js|javascript)?\s*\n([\s\S]*?)```/i);
-  if (fenced) return fenced[1];
-  // sinon, du premier "async function" jusqu'à la fin du dernier accolade équilibrée
-  const start = text.indexOf('async function');
-  if (start < 0) return '';
-  return text.slice(start);
+  let body = fenced ? fenced[1] : '';
+  if (!body) {
+    const start = text.indexOf('async function');
+    if (start < 0) {
+      // classe (ex: `class X { static async searchResults... }`)
+      const cs = text.indexOf('class ');
+      if (cs >= 0) body = text.slice(cs);
+    } else body = text.slice(start);
+  }
+  return body;
 }
 
-function buildPrompt({ target, sourceName, engine, home, content, searchHtml, episodeHtml, refCode, model, CONTRACT }) {
+function buildPrompt({ target, sourceName, engine, home, content, searchHtml, episodeHtml, api, refCode, model, CONTRACT }) {
   // Extraits réels ciblés : on DONNE au LLM les vrais blocs HTML pour que les
   // sélecteurs soient lus, pas inventés. (1ère version passait 9Ko génériques
   // -> le LLM a halluciné short-item/full-story/episode-item, tous absents.)
@@ -240,7 +310,25 @@ ${refCode.slice(0, 6000)}
 
 === INSTRUCTIONS STRICTES ===
 1. Écris le module complet pour ${sourceName} (langue: ${/french/i.test(model.language || '') ? 'français VOSTFR/VF' : model.language || 'à déduire du site'}).
-2. Les sélecteurs/regex DOIVENT correspondre au HTML RÉEL fourni ci-dessus. Si une structure n'est pas visible dans l'extrait, dis-le plutôt que d'inventer.
+2. ${api
+    ? `CE SITE EXPOSE UNE API REST. Utilise-LÀ en priorité via fetchv2 — ne scrape PAS du HTML.
+Exemples de RÉPONSES RÉELLES (replique EXACTEMENT les champs, ne les devine pas) :
+${api.search ? `• RECHERCHE  GET ${api.search.url}
+\`\`\`json
+${api.search.body.slice(0, 1500)}
+\`\`\`` : ''}
+${api.details ? `• DÉTAILS   GET ${api.details.url}
+\`\`\`json
+${api.details.body.slice(0, 1200)}
+\`\`\`` : ''}
+${api.episodes ? `• ÉPISODES GET ${api.episodes.url}
+\`\`\`json
+${api.episodes.body.slice(0, 1200)}
+\`\`\`` : ''}
+${api.graphql ? `• GRAPHQL  POST ${api.graphql.url}` : ''}
+Règle stricte : mappe les CHAMPS RÉELS ci-dessus (ex: si la réponse est sous "data.data" avec "episode_number", utilise exactement ça — n'invente pas "episodes"/"number"). Pour extractStreamUrl, si l'endpoint des flux renvoie 401/403, cherche le mécanisme d'auth (token en header, cookie de session, ou appel préalable) et gère-le ; sinon retourne {streams:[]}.`
+    : `Les sélecteurs/regex DOIVENT correspondre au HTML RÉEL fourni ci-dessus. Si une structure n'est pas visible dans l'extrait, dis-le plutôt que d'inventer.`}
 3. Extrais les hébergeurs via leurs embeds réels (iframe/packer). N'enlève AUCUN flux trouvé.
-4. Retourne UNIQUEMENT le code JavaScript dans un bloc \`\`\`js ... \`\`\`. Pas d'explication autour.`;
+4. Retourne UNIQUEMENT le code JavaScript dans un bloc \`\`\`js ... \`\`\`. Pas d'explication autour.
+5. N'utilise PAS de classe : déclare les 4 fonctions au niveau racine (ex: \`async function searchResults(keyword) { ... }\`).`;
 }

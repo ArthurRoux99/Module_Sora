@@ -10,5 +10,6 @@ RÈGLES STRICTES:
   - console.log accepte UN SEUL argument: concatène avec '+' (ex: console.log("x=" + y)). Un console.log avec une virgule plante dans l'app.
   - Le champ 'baseUrl' (si utilisé) et tous les href/streamUrl doivent etre ABSOLUS (https://...). Un href relatif fait échouer l'app (elle ne préfixe pas).
   - Ne lance PAS d'exception non catchée: enveloppe le parsing dans try/catch et retourne un tableau/objet vide (ou [{title:'Error',image:'',href:''}]) en cas d'erreur.
+  - IMPORTANT: déclare les 4 fonctions AU NIVEAU RACINE (function searchResults(){}), PAS dans une classe. L'app appelle searchResults/extractDetails/extractEpisodes/extractStreamUrl directement — une classe non exportée ne sera pas trouvée.
   - Les regex de parsing ne doivent PAS être ancrés de façon à casser si l'URL est préfixée par le baseUrl.
   - Respecte le contrat d'extraction des hébergeurs: extrais les URLs média réelles (mp4/m3u8), gère au mieux les embeds (iframe/packer). N'enlève AUCUN flux trouvé.
