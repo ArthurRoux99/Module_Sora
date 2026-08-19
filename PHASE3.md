@@ -65,7 +65,31 @@ Si `searchResults` renvoie 0 (cas fréquent sur site AJAX) : le module généré
 une **base à corriger à la main** sur les sélecteurs, pas un livrable prêt à
 l'emploi. C'est le seuil actuel de la génération automatique.
 
+## Sites testés (Miruro, Re:ANIME) — mur par design
+
+`miruro.to` (React SPA, données via AniList GraphQL) et `reanime.to` (Vue SPA +
+Cloudflare, API REST) sont des **SPA avec API**. L'option 1 (jsdom/playwright)
+est **inutile** ici : les données viennent d'endpoints JSON/GraphQL atteignables
+par `fetchv2` direct (comme Animex) — pas de rendu HTML à exécuter.
+
+Mais leur **auth de flux est un mur** :
+- `reanime.to` : search/details/episodes en **public** (200), mais
+  `/api/v1/anime/:id/episode/1` → **401** `{"error":"Unauthorized Access"}`.
+  Le front vérifie `token && userId && username` avant le lecteur → le site
+  **demande un compte** pour streamer. Un module non-connecté ne peut pas
+  récupérer les flux (vérifié : 10+ endpoints/variants de token tous en 401,
+  pas de challenge Cloudflare, pas de token anonyme public).
+- `miruro.to` : proxy de flux `/api/secure/pipe` → **410**, API signée côté client.
+
+**Conséquence** : ces deux sites ne sont pas couvrables par un module Sora
+non-connecté. Le pipeline API-first (detectApi + exemples réels par endpoint)
+fonctionne pour le **catalogue** (sur Re:ANIME : search 6 résultats, details OK,
+episodes 28 réels) mais bute sur l'**auth de flux**. Pour les valider de bout en
+bout, il faudrait soit un login (hors périmètre Sora), soit un site AJAX à
+**flux publics** (ex: Animex) comme preuve de concept.
+
 ## Correction de bug connexe
 
 `runtime.mjs` : `pace()` laissait un `setTimeout` pending au `process.exit()`
 sous Windows → crash natif `UV_HANDLE_CLOSING`. Corrigé via `timer.unref()`.
+
