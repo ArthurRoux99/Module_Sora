@@ -484,16 +484,31 @@ async function extractStreamUrl(url) {
             if (!seenUrls.has(s.streamUrl)) { seenUrls.add(s.streamUrl); uniqueStreams.push(s); }
         }
 
-        // PRIORISATION VOSTFR (fork) : on remonte les pistes VOSTFR en tête pour
-        // que le premier serveur proposé par ShiroX soit sous-titré français.
-        // Aucun flux n'est retiré — VF et VA restent disponibles en dessous.
+        // PRIORISATION (fork) : langue d'abord (VOSTFR), puis fiabilité du
+        // serveur. Aucun flux n'est retiré — VF/VA et les serveurs lents ou
+        // capricieux restent disponibles, simplement plus bas dans la liste.
+        //
+        // Classement de fiabilité issu de mesures + retour terrain ShiroX :
+        //   Ansembed  : HLS 1080p, 200 constant                  -> OK
+        //   Sibnet    : MP4 206 constant                          -> OK
+        //   Uqload/Oneupload : OK dans le webview ShiroX          -> OK
+        //   Minochinos : fonctionne mais très lent                -> pénalisé
+        //   Lplayer   : NOK en lecture réelle                     -> dernier
+        //   Smoothpre : hôte acek-cdn.com mort en DNS             -> dernier
         const langRank = (title) => {
             const t = (title || "").toUpperCase();
             if (t.includes("VOSTFR")) return 0;
             if (t.includes("VF")) return 1;
             return 2;
         };
-        uniqueStreams.sort((a, b) => langRank(a.title) - langRank(b.title));
+        const hostRank = (title) => {
+            const t = (title || "").toLowerCase();
+            if (t.includes("smoothpre") || t.includes("lplayer")) return 3;
+            if (t.includes("minochinos")) return 2;
+            if (t.includes("ansembed") || t.includes("sibnet") || t.includes("upload")) return 0;
+            return 1;
+        };
+        uniqueStreams.sort((a, b) => langRank(a.title) - langRank(b.title) || hostRank(a.title) - hostRank(b.title));
 
         sendSupabaseLog("Anime-Sama", "PLAYER", { 
             media_url: url, ep_number: epIndex + 1, streams_found: uniqueStreams.length, servers: extractedNames

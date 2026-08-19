@@ -495,7 +495,13 @@ async function searchResults(keyword) {
             const result = {
                 title: item.titleEnglish || item.titleRomaji || "Untitled",
                 image: imageUrl,
-                href: "anime/" + item.anilistId + "/" + item.id
+                // URLs ABSOLUES (fork) : l'original renvoyait des href relatifs
+                // ("anime/<id>/<slug>"). Testé côté harness, les deux formes
+                // fonctionnent, mais ShiroX ne listait aucun épisode avec le
+                // relatif, alors qu'Anime-Sama — qui renvoie de l'absolu — passe.
+                // Les regex de parsing sont non-ancrées, donc l'absolu reste
+                // compatible avec extractDetails/Episodes/StreamUrl.
+                href: "https://animex.one/anime/" + item.anilistId + "/" + item.id
             };
             if (index === 0) console.log("[searchResults] First transformed item: " + JSON.stringify(result));
             return result;
@@ -565,7 +571,8 @@ async function extractEpisodes(url) {
             const episodesArray = [];
             for (let i = 1; i <= episodesCount; i++) {
                 episodesArray.push({
-                    href: `anime/${anilistId}/${match[2] || ''}/${i}`,
+                    // href absolu, cohérent avec searchResults (cf. note plus haut)
+                    href: `https://animex.one/anime/${anilistId}/${match[2] || ''}/${i}`,
                     number: i,
                     title: `Episode ${i}`
                 });
