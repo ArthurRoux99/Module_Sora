@@ -171,11 +171,16 @@ console.log(`requêtes réseau : ${stats.requests.length} (${stats.failedCount} 
 console.log(`streams jouables : ${playable}/${probed.length}${streams.length > probed.length ? ` (sur ${streams.length} annoncés)` : ''}`);
 console.log(`durée : ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
-// Un 403/429 côté source n'est PAS un bug du module : c'est un throttle serveur.
-// Sans ce diagnostic, un échec transitoire se lit à tort comme une régression.
-const throttled = stats.requests.filter((r) => r.status === 403 || r.status === 429);
+// Un 403/429 côté source n'est PAS forcément un bug du module. Deux cas très
+// différents : challenge de pose de cookie (résolu par retry) vs throttle réel.
+const cookieChallenges = stats.requests.filter((r) => r.cookieChallenge);
+const throttled = stats.requests.filter((r) => (r.status === 403 || r.status === 429) && !r.cookieChallenge);
+if (cookieChallenges.length) {
+  console.log(`\n\x1b[36mchallenge cookie\x1b[0m : ${cookieChallenges.length} réponse(s) 403 suivie(s) d'un retry avec cookie`);
+  console.log(`   Comportement normal d'un backend Cloudflare — pas un défaut du module.`);
+}
 if (throttled.length) {
-  console.log(`\n\x1b[33manti-bot / throttle\x1b[0m : ${throttled.length} réponse(s) 403/429 —`);
+  console.log(`\n\x1b[33manti-bot / throttle\x1b[0m : ${throttled.length} réponse(s) 403/429 non résolue(s) —`);
   for (const r of throttled.slice(0, 3)) console.log(`   [${r.status}] ${r.url.slice(0, 90)}`);
   console.log(`   Cause probable : cadence trop élevée, pas un défaut du module.`);
   console.log(`   Réessayer avec \x1b[1m--pace 1500\x1b[0m, ou patienter ~1 min.`);
