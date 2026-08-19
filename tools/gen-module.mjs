@@ -19,7 +19,7 @@ import { RuntimeStats, createSandbox } from './runtime.mjs';
 
 const args = process.argv.slice(2);
 const target = args[0];
-if (!target) { console.error('usage: node tools/gen-module.mjs <url> "Nom Source" [--model slug] [--no-write]'); process.exit(1); }
+if (!target) { console.error('usage: node tools/gen-module.mjs <url> "Nom Source" [--model slug] [--no-write]'); process.exitCode = 1; }
 const sourceName = args[1] || new URL(target).host.replace(/^www\./, '');
 const noWrite = args.includes('--no-write');
 const forcedModelIdx = args.indexOf('--model');
@@ -169,7 +169,7 @@ candidates.sort((a, b) => b.installCount - a.installCount);
 let model = forcedModel ? index.find((c) => c.slug === forcedModel && c.fnsPresent === 4) : candidates[0];
 // Si --model force un moteur différent, ne pas bloquer sur le filtre de moteur :
 if (forcedModel && !model) model = index.find((c) => c.slug === forcedModel);
-if (!model) { console.error('Aucun modèle de référence pour le moteur', engine); process.exit(1); }
+if (!model) { console.error('Aucun modèle de référence pour le moteur', engine); process.exitCode = 1; }
 console.log(`moteur: ${engine}  | modèle de référence: ${model.sourceName} (${model.slug}.js, ${model.installCount} installs)`);
 
 const refCode = existsSync(`corpus/${model.slug}.js`) ? await readFile(`corpus/${model.slug}.js`, 'utf-8') : '';
@@ -183,7 +183,7 @@ const llm = await ollamaGenerate(prompt, { model: MODEL, host: OLLAMA });
 console.log(`réponse: ${llm.length} caractères`);
 
 const code = extractJs(llm);
-if (!code) { console.error('\x1b[31mAucun bloc .js extrait de la réponse LLM\x1b[0m'); console.log(llm.slice(0, 2000)); process.exit(1); }
+if (!code) { console.error('\x1b[31mAucun bloc .js extrait de la réponse LLM\x1b[0m'); console.log(llm.slice(0, 2000)); process.exitCode = 1; }
 
 // ---- 4. Ecriture + smoke test ----
 const slug = sourceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

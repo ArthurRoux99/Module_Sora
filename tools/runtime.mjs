@@ -129,7 +129,12 @@ export function createSandbox({ stats, allowTelemetry = false, verbose = false, 
   async function pace() {
     if (paceMs <= 0) return;
     const wait = paceMs - (Date.now() - lastRequestAt);
-    if (wait > 0) await new Promise((r) => { const t = setTimeout(() => { t.unref(); r(); }, wait); t.unref(); });
+    if (wait > 0) {
+      // PAS de unref ici : le timer doit maintenir le process en vie pour que
+      // la cadence soit réellement respectée (sinon la promesse reste pending
+      // si aucune autre tâche réseau n'est active entre deux requêtes).
+      await new Promise((r) => setTimeout(r, wait));
+    }
     lastRequestAt = Date.now();
   }
 

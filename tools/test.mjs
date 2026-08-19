@@ -11,7 +11,17 @@
  *   node tools/test.mjs <chemin_module.js> --search "frieren" [--lang VOSTFR] [-v]
  */
 import { loadModule } from './runtime.mjs';
-import { argv, exit } from 'node:process';
+import { argv } from 'node:process';
+
+// Sortie propre : ne PAS utiliser process.exit() brutalement — sous Windows ça
+// crash (UV_HANDLE_CLOSING) quand undici a encore des sockets ouverts. On set
+// juste exitCode et on laisse Node fermer les connexions ; un timer unrefé de
+// secours évite un hang si une requête reste vraiment pending.
+function quit(n) {
+  process.exitCode = n;
+  setTimeout(() => {}, 300).unref();
+}
+const exit = quit;
 
 const args = argv.slice(2);
 if (args.length === 0) {
@@ -67,6 +77,7 @@ const t0 = Date.now();
 console.log(`\n\x1b[1mMODULE\x1b[0m ${scriptPath}`);
 console.log(`\x1b[1mQUERY \x1b[0m "${keyword}"${wantLang ? `  lang=${wantLang}` : ''}\n`);
 
+async function main() {
 const { fns, stats, missing } = await loadModule(scriptPath, { verbose, paceMs });
 if (missing.length) {
   fail(`fonctions manquantes : ${missing.join(', ')}`);
@@ -195,3 +206,9 @@ if (failures === 0 && playable > 0) {
 }
 console.log(`\n\x1b[31m\x1b[1m${failures} PROBLÈME(S)\x1b[0m${playable === 0 ? ' — aucun flux jouable' : ''}\n`);
 exit(1);
+}
+
+main().catch((e) => {
+  console.error('Erreur test:', e);
+  process.exitCode = 1;
+});

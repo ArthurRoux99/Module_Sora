@@ -1,0 +1,27 @@
+{
+    "name": "Re:Anime",
+    "schemaVersion": 1,
+    "version": "1.0.0",
+    "author": {
+        "name": "ArthurRoux99 (fork généré)",
+        "icon": "https://reanime.to/favicon.ico",
+        "url": "https://github.com/ArthurRoux99"
+    },
+    "baseUrl": "https://reanime.to",
+    "iconUrl": "https://reanime.to/favicon.ico",
+    "scriptUrl": "https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/ReAnime/reanime.js",
+    "supportedStreamQualities": ["360p", "480p", "720p", "1080p"],
+    "description": "Module Re:ANIME (catalogue API). Les flux exigent un compte (401) — voir README. Pont d'auth best-effort via webview.",
+    "language": "French (VOSTFR/VF)",
+    "languageType": ["Subbed", "Dubbed"],
+    "asyncJS": true,
+    "supportsShirox": true,
+    "sourceType": "Anime",
+    "streamType": "HLS",
+    "isNSFW": false,
+    "isTorrent": false,
+    "softsub": true,
+    "resolveViaProxy": false,
+    "mapsTo": [],
+    "usesManualCodecs": false
+}
