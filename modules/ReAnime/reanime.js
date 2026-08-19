@@ -1,3 +1,22 @@
+// ── AUTH (option B) ──────────────────────────────────────────────────────────
+// Re:ANIME verrouille ses FLUX derrière un compte (Bearer token stocké en
+// localStorage par le front connecté). Pour débloquer les flux SANS compte
+// dans Sora/ShiroX, colle ICI le token récupéré depuis ton navigateur connecté
+// (DevTools > Network > requête /api/v1/user/ws-ticket > copie le header
+// `Authorization: Bearer <TOKEN>`). Laisse '' si pas de token (catalogue seul).
+// ⚠️ Ne committe JAMAIS un token réel — ce fichier est volontairement laissé
+//    avec '' par défaut et ignoré par git quand tu le remplis en local.
+const REANIME_TOKEN = '';
+
+function reanimeAuthHeader() {
+  // Priorité : variable locale, sinon localStorage (si le webview partage la session)
+  let t = REANIME_TOKEN;
+  if (!t && typeof localStorage !== 'undefined') {
+    try { t = localStorage.getItem('token') || localStorage.getItem('auth_token') || ''; } catch {}
+  }
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
 async function searchResults(keyword) {
     try {
         const response = await fetchv2(`https://reanime.to/api/v1/search?q=${encodeURIComponent(keyword)}`, {}, 'GET');
@@ -50,18 +69,13 @@ async function extractEpisodes(url) {
     }
 }
 
-// PONT AUTH BEST-EFFORT (option 2) :
-// Si l'utilisateur est connecté dans le webview du lecteur, un Bearer token
-// peut exister en localStorage. On tente de le récupérer ; sinon on rend []
-// (pas de flux public sur Re:ANIME — voir PHASE3.md).
+// AUTH (option B) : on envoie le Bearer token si présent (variable locale ou
+// localStorage du webview connecté). Sans token -> 401 attendu -> streams:[].
 async function extractStreamUrl(url) {
     try {
         const animeId = url.split('/').pop().split('?')[0];
         const epNum = new URL(url).searchParams.get('ep') || '1';
-        // Récupère le token depuis le localStorage (fourni par le webview si logué).
-        let token = '';
-        try { token = (typeof localStorage !== 'undefined' && localStorage.getItem('token')) || ''; } catch {}
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const headers = reanimeAuthHeader();
         const response = await fetchv2(`https://reanime.to/api/v1/anime/${animeId}/episode/${epNum}`, headers, 'GET');
         if (response.status === 401) {
             console.log('ReAnime stream: 401 — compte requis (connectez-vous dans le lecteur)');
