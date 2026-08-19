@@ -129,7 +129,7 @@ export function createSandbox({ stats, allowTelemetry = false, verbose = false, 
   async function pace() {
     if (paceMs <= 0) return;
     const wait = paceMs - (Date.now() - lastRequestAt);
-    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    if (wait > 0) await new Promise((r) => { const t = setTimeout(() => { t.unref(); r(); }, wait); t.unref(); });
     lastRequestAt = Date.now();
   }
 

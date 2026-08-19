@@ -1,0 +1,14 @@
+Le module Sora/ShiroX DOIT déclarer exactement ces 4 fonctions async, chacune retournant du JSON.stringify(...):
+  async function searchResults(keyword)   -> string JSON: [{title, image, href}]
+  async function extractDetails(url)       -> string JSON: {description, aliases, airdate}
+  async function extractEpisodes(url)      -> string JSON: [{href, number:Number, title?}]
+  async function extractStreamUrl(url)     -> string JSON: {streams:[{title, streamUrl, headers?,subtitle?}], subtitles?, Referer?}
+RÈGLES STRICTES:
+  - Tout retour de fonction DOIT etre JSON.stringify(...). Pas d'objet brut, pas de return d'URL seule.
+  - 'number' des épisodes doit etre un Number (Number(i)), pas une string.
+  - Utilise fetchv2(url, headers, method, body, redirect, encoding) pour les requêtes HTTP (disponible dans le scope).
+  - console.log accepte UN SEUL argument: concatène avec '+' (ex: console.log("x=" + y)). Un console.log avec une virgule plante dans l'app.
+  - Le champ 'baseUrl' (si utilisé) et tous les href/streamUrl doivent etre ABSOLUS (https://...). Un href relatif fait échouer l'app (elle ne préfixe pas).
+  - Ne lance PAS d'exception non catchée: enveloppe le parsing dans try/catch et retourne un tableau/objet vide (ou [{title:'Error',image:'',href:''}]) en cas d'erreur.
+  - Les regex de parsing ne doivent PAS être ancrés de façon à casser si l'URL est préfixée par le baseUrl.
+  - Respecte le contrat d'extraction des hébergeurs: extrais les URLs média réelles (mp4/m3u8), gère au mieux les embeds (iframe/packer). N'enlève AUCUN flux trouvé.
