@@ -1,0 +1,16 @@
+const fs=require("fs");
+const s=fs.readFileSync("C:/Users/Arthur PC/AppData/Local/Temp/an_vp.js","utf8");
+const out=[];
+out.push(s.slice(s.indexOf("const lr=new Uint8Array"), s.indexOf("const lr=new Uint8Array")+200));
+out.push(s.slice(s.indexOf("dn=("), s.indexOf("dn=(")+200));
+out.push(s.slice(s.indexOf("kt=new Uint8Array"), s.indexOf("kt=new Uint8Array")+200));
+out.push(s.slice(s.indexOf("Me=["), s.indexOf("Me=[")+160));
+out.push("function Qe(e){return String.fromCharCode(...e)}");
+out.push(s.slice(s.indexOf("He=(e,t,n)"), s.indexOf("He=(e,t,n)")+130));
+out.push(s.slice(s.indexOf("Rt=(e,t)"), s.indexOf("Rt=(e,t)")+130));
+out.push(s.slice(s.indexOf("function fr(e,t)"), s.indexOf("function fr(e,t)")+260));
+out.push(s.slice(s.indexOf("function mt(e)"), s.indexOf("function mt(e)")+120));
+out.push(s.slice(s.indexOf("async function Sd()"), s.indexOf("async function Sd()")+1500));
+out.push(s.slice(s.indexOf("async function js(e)"), s.indexOf("async function js(e)")+460));
+fs.writeFileSync("C:/Users/Arthur PC/AppData/Local/Temp/anidap_crypto_extracted.js", out.join("\n\n"));
+console.log("written bytes:", out.join("\n\n").length);

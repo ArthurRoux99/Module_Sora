@@ -231,6 +231,7 @@ export function createSandbox({ stats, allowTelemetry = false, verbose = false, 
     Buffer, TextDecoder, TextEncoder, URL, URLSearchParams,
     atob: (s) => Buffer.from(s, 'base64').toString('binary'),
     btoa: (s) => Buffer.from(s, 'binary').toString('base64'),
+    crypto: globalThis.crypto,
     setTimeout, clearTimeout, Promise, JSON, Math, Date, RegExp, parseInt, parseFloat,
     encodeURIComponent, decodeURIComponent, encodeURI, decodeURI, isNaN,
   };
