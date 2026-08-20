@@ -151,7 +151,11 @@ export function createSandbox({ stats, allowTelemetry = false, verbose = false, 
       return wrapResponse({ status: 204, url: target, headers: new Map() }, '');
     }
 
-    const finalHeaders = { 'User-Agent': DEFAULT_UA, 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8', ...headers };
+    // FIDÉLITÉ : Sora laisse le module override le User-Agent (ex. pour
+    // contourner le filtrage Cloudflare qui bloque les UA trop anciens).
+    // On merge donc headers EN DERNIER pour permettre l'override, tout en
+    // gardant un UA par défaut si le module n'en fournit pas.
+    const finalHeaders = { 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8', ...headers, 'User-Agent': headers['User-Agent'] || DEFAULT_UA };
     let host = '';
     try { host = new URL(target).host; } catch {}
     // Renvoie les cookies déjà émis par cet hôte, sauf si le module en fournit.
