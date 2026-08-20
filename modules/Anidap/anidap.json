@@ -1,0 +1,28 @@
+{
+    "sourceName": "Anidap",
+    "iconUrl": "https://anidap.lol/favicon.ico",
+    "author": {
+        "name": "ArthurRoux99 (fork AllAnime)",
+        "icon": "https://avatars.githubusercontent.com/u/0?v=4",
+        "url": "https://github.com/ArthurRoux99"
+    },
+    "version": "1.0.0",
+    "language": "French (VOSTFR)",
+    "languageType": [
+        "Subbed",
+        "Dubbed"
+    ],
+    "streamType": "HLS",
+    "quality": "1080p",
+    "baseUrl": "https://anidap.lol/",
+    "searchBaseUrl": "https://anidap.lol/search?q=%s",
+    "scriptUrl": "https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Anidap/anidap.js",
+    "type": "anime",
+    "asyncJS": true,
+    "softsub": true,
+    "downloadSupport": true,
+    "combo": false,
+    "supportsSora": true,
+    "supportsShirox": true,
+    "supportsLuna": true
+}
