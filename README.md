@@ -5,37 +5,34 @@ qui simule le runtime de l'app (pas besoin de relancer ShiroX à chaque itérati
 
 ## Installation dans ShiroX / Sora
 
-Ajouter un module par URL de manifest :
+Ajouter un module par URL de manifest. Après mise à jour, incrémenter `version`
+dans le manifest (l'app cache agressivement les scripts).
 
-**Anime-Sama VOSTFR** (français, VOSTFR prioritaire)
-```
-https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Anime-Sama-VOSTFR/anime-sama-vostfr.json
-```
-**Miruro** 
-```
-https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/miruro.json
-```
-**Animex** (anglais, SUB prioritaire, HLS 1080p)
-```
-https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Animex/animex.json
-```
+### Modules livrés
 
-> Après une mise à jour, incrémenter `version` dans le manifest : l'app met les
-> scripts en cache de façon agressive.
+| Module | Flux | Manifest (URL d'installation) |
+|--------|------|-------------------------------|
+| **Anidap** (VOSTFR, flux cracké) | ✅ M3U8 + sous-titres | `https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Anidap/anidap.json` |
+| **Anime-Sama VOSTFR** | ✅ 4/6 jouables | `https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Anime-Sama-VOSTFR/anime-sama-vostfr.json` |
+| **Animex** (anglais, SUB) | ✅ 6/6 jouables | `https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Animex/animex.json` |
+| **Miruro** (via instance user) | ⚠️ flux si `MIRURO_API_BASE` rempli | `https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Miruro/miruro.json` |
+| **Mkissa** (AllAnime, catalogue) | ⚠️ catalogue seul (token `x-aa-boot` ofusqué) | `https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Mkissa/mkissa.json` |
+| **Kazora** (catalogue) | ⚠️ catalogue seul (embed externe) | `https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/Kazora/kazora.json` |
+| **Re:ANIME** (catalogue) | ❌ mur flux (WASM/AES flixcloud) | `https://raw.githubusercontent.com/ArthurRoux99/Module_Sora/main/modules/ReAnime/reanime.json` |
 
-## État mesuré (Frieren, épisode 1)
+> **Anidap** est le module à flux réel complet (reverse du chiffrement AES-GCM+XOR
+> repro en JS pur). **Mkissa/Kazora/Re:ANIME** ont un flux bloqué par design
+> (token ofusqué / embed externe / WASM) — leur catalogue fonctionne.
 
-| | Anime-Sama VOSTFR | Animex |
-|---|---|---|
-| Architecture | scraping HTML → MP4/HLS | GraphQL → HLS |
-| Serveurs annoncés | 6 | 11 |
-| Flux jouables | 4/6 | 6/6 |
-| Priorité langue | `[VOSTFR]` en tête | `SUB` en tête |
-| Épisodes | 38 | 28 |
+### Déploiement Miruro (flux réel)
 
-Les 2 échecs d'Anime-Sama sont **Smoothpre** : son hôte `acek-cdn.com` ne résout
-pas en DNS (mort côté source). Les entrées sont conservées volontairement — elles
-ne coûtent rien et peuvent revivre.
+Le module Miruro pointe vers ton instance (var `MIRURO_API_BASE` dans
+`modules/Miruro/miruro.js`). Déployer `Shineii86/MiruroAPI` sur Vercel, renseigner
+les clés provider + un proxy anti-Cloudflare (`SCRAPER_API_KEY` ou
+`FLARESOLVERR_URL`), puis coller l'URL dans `MIRURO_API_BASE`. Guide :
+`MIRURO_DEPLOY.md`.
+
+
 
 ## Modifications par rapport aux modules amont
 
